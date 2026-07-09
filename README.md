@@ -12,7 +12,7 @@ browser. Your API key is passed straight through and never stored.
 > too — `tokenlens eval` grades compressed answers against cleartext answers with
 > an LLM judge — but **the bundled golden set is a 10-task starter set, not a
 > benchmark**. Calibrate on your own traffic before trusting a rate. The
-> subscription (OAuth) routing path is not covered by automated tests.
+> Claude Code routing path is not covered by automated tests.
 > Feedback and PRs welcome.
 
 See [`DESIGN.md`](./DESIGN.md) for the full architecture and roadmap.
@@ -145,8 +145,8 @@ cached prefix, tool calls, code, images, or assistant history.
 
 The default saved-token number is a local estimate. For the true figure, add
 `--measure`: every compressed request is counted (original and compressed) via
-Anthropic's `count_tokens` endpoint — free, separate from your usage limits, and
-run in the background so it never slows you down.
+Anthropic's `count_tokens` endpoint — free, doesn't add to your billed token
+usage, and run in the background so it never slows you down.
 
 ```bash
 python3 -m tokenlens serve --compress llmlingua2 --rate 0.6 --measure
@@ -270,8 +270,8 @@ Watch the **cache-health banner** on the dashboard: green means compression isn'
 disturbing the cache. If it goes amber (cache reads stuck at zero), stop and
 check — that means the cache is being busted, which is counterproductive.
 
-> The subscription (OAuth) routing path isn't covered by automated tests. If
-> Claude Code errors with a custom base URL, open an issue with the message.
+> The Claude Code routing path isn't covered by automated tests. If it errors
+> with a custom base URL, open an issue with the message.
 
 ---
 
@@ -352,6 +352,17 @@ they work: `tokenlens eval` has to say yes before a rung is worth shipping.
 Golden tasks (`tokenlens/eval/goldens/default.jsonl`) are welcome too.
 
 ---
+
+## Disclaimer
+
+TokenLens is an independent, community project. It is **not affiliated with,
+endorsed by, or sponsored by Anthropic**. "Claude", "Claude Code", and
+"Anthropic" are referenced only to describe compatibility.
+
+Use TokenLens with your own credentials and in accordance with your provider's
+terms of service and acceptable use policy. You are responsible for how you use
+it. The software is provided "as is", without warranty of any kind (see the MIT
+license below).
 
 ## License
 

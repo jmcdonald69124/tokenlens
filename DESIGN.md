@@ -138,24 +138,15 @@ every deployment is a thin wrapper around it:
 machine) and is the fastest path to a testable, real product. The rung-5 tiny
 local scorer runs comfortably on desktop hardware.
 
-**Two value axes (who benefits).** Compression helps any client metered by
-tokens — whichever form the meter takes — *provided the client can be pointed at
-the proxy*:
-
-1. **Per-token / API users (incl. BYOK)** — the meter is dollars; compression
-   cuts cost directly.
-2. **Subscription / usage-limit users** — the meter is a rolling session limit or
-   weekly cap (e.g. Claude Pro/Max, Claude Code on a Max plan). No dollars change
-   hands, but every token not sent is budget not spent against the cap, so
-   compression **stretches the plan** — more turns per session, more work before
-   hitting the wall.
+**Who benefits.** Compression helps any client billed by tokens — *provided the
+client can be pointed at the proxy*. Per-token / API users (including BYOK) pay
+by the token, so compressing the request cuts cost directly.
 
 The reachability caveat is separate from the economics: a client only benefits
-if it exposes a base-URL / proxy hook. **Claude Code honors `ANTHROPIC_BASE_URL`
-and qualifies on both axes** (per-token via the API, or limit-stretching on a Max
-subscription). The **consumer Claude desktop chat app** qualifies on the meter
-(subscription limits) but has **no proxy hook** and talks to claude.ai directly,
-so its own chat traffic can't be intercepted today.
+if it exposes a base-URL / proxy hook. **Claude Code honors `ANTHROPIC_BASE_URL`**,
+so it can route through the proxy. The **consumer Claude desktop chat app** has
+**no proxy hook** and talks to claude.ai directly, so its traffic can't be
+intercepted.
 
 ## 6. MVP milestones
 
@@ -197,7 +188,5 @@ so its own chat traffic can't be intercepted today.
 - **Eval harness is built first** — it defines "optimal."
 - **Deployment: one library core, deployed local-first** (BYOK local runner the
   user can test on their own machine), then self-hosted proxy, then hosted SaaS,
-  with a desktop GUI as an optional later form. Target audience is any
-  token-metered client that can be pointed at the proxy — per-token/API (incl.
-  BYOK) users **and** subscription/usage-limit users (e.g. Claude Code on Max),
-  where compression stretches the cap instead of cutting a bill.
+  with a desktop GUI as an optional later form. Target audience is any client
+  billed by tokens that can be pointed at the proxy (per-token / API, incl. BYOK).
