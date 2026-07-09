@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tokenlens"
+version = "0.1.0"
+description = "Local BYOK proxy that measures (and later compresses) tokens sent to a frontier model."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+# Milestone 1 has zero runtime dependencies — Python standard library only.
+dependencies = []
+
+[project.scripts]
+tokenlens = "tokenlens.cli:main"
+
+[tool.setuptools]
+packages = ["tokenlens"]
