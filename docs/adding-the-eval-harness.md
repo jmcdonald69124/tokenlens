@@ -29,6 +29,34 @@ worst possible thing is not a metric, it is a temptation.
 
 The number that was missing is the denominator: **did the answer get worse?**
 
+If you have ever trained a classifier, you have already met this bug — it is
+**recall with no precision**. Build a tumour detector that answers "yes" for
+every scan and you have a model with *perfect recall*. It catches every case. It
+is also useless, and nothing *inside* that number will ever tell you so. This is
+what the confusion matrix is actually for: not thoroughness, but the fact that any
+single cell of it can be maximised by a degenerate model, and only the cells *next
+to* each other constrain the lie. Precision and recall aren't two facts about a
+classifier. They're one fact, and either half on its own is propaganda.
+
+Tokens saved is recall. It counts what the compressor removed and never asks what
+it destroyed — and exactly like the classifier that says yes to everything, the
+way to maximise it is to do the worst possible thing. Retention — *did the answer
+survive?* — is the precision term. I had shipped a dashboard with one and not the
+other.
+
+The analogy runs deeper than the joke, and it turned out to be load-bearing.
+`--rate` is a decision threshold: turn it down and the compressor deletes more
+aggressively, exactly as dropping a classifier's threshold makes it fire more
+freely. So the thing the harness prints — reduction on one axis, quality on the
+other, one point per rate — **is a precision–recall curve**. The per-class policy
+is the operating point. And the reason the curve has to be per class is the same
+reason you never trust a single F1 across a skewed dataset: the trade-off is
+different in each region, and an average over all of them describes nothing that
+exists.
+
+Which leaves one question the classifier analogy asks and I hadn't: *how noisy is
+the label?* Hold that thought.
+
 The README said so out loud. It shipped with a warning that read, in part:
 "there is **no output-quality eval harness yet**, so don't turn `--rate` up on
 important work and assume the result is identical." The design doc was blunter.
@@ -363,6 +391,16 @@ Every number in the run had to be re-read against that:
 The pretty result I nearly published — 32.6% smaller at 95.7% quality — was one
 draw from a distribution I hadn't looked at. Run with `--repeats 3` it came back
 as a 9.5% loss. It was never a shippable trade. It was a coin landing well.
+
+This is the question I left hanging earlier, and it has a name in the older field
+too: **label noise**. My judge is the annotator, and I had skipped the one thing
+nobody running a labelling pipeline would dream of skipping — I never measured
+inter-annotator agreement. Hand the same pair to the same grader twice and it
+doesn't agree with *itself*. And once the labels are noisy there is a floor under
+your error that no amount of model improvement gets beneath: you cannot resolve a
+difference smaller than the disagreement in the thing doing the resolving.
+Reporting a number below that floor isn't precision. It's fiction with decimal
+places.
 
 And the noise is not a constant. It is a property of the *task*:
 

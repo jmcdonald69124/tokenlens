@@ -202,7 +202,13 @@ class _Handler(BaseHTTPRequestHandler):
                         file=sys.stderr, flush=True,
                     )
             except Exception as e:  # never break the user's request
-                print(f"[tokenlens] compression skipped: {e}", file=sys.stderr, flush=True)
+                # Type only, not the message: an exception raised inside a
+                # third-party tokenizer can quote the text it choked on, and
+                # "prompt bodies are never logged" has to survive the error path
+                # too or it isn't a guarantee. Reproduce with `tokenlens bench`.
+                print(f"[tokenlens] compression skipped ({type(e).__name__}); "
+                      f"request forwarded unchanged",
+                      file=sys.stderr, flush=True)
                 forward_body = body
 
         req_headers = {
@@ -484,6 +490,18 @@ def serve(host: str, port: int, upstream: str,
         print(f"                and adds one judge call. Lower --judge-sample to spend less.")
     if _Handler.eval_report:
         print(f"  eval report:  {eval_report} (calibration curve shown on the dashboard)")
+
+    # The dashboard feed is unauthenticated — anyone who can reach the port can
+    # read it. That is fine on loopback and only on loopback. With --judge on it
+    # carries the judge's one-line notes, which are derived from your prompts, so
+    # binding this to a routable interface publishes your content to the network.
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        print()
+        print(f"  WARNING: bound to {host}, not loopback. {base}/tokenlens/ is")
+        print( "           unauthenticated: anyone who can reach this port can read your")
+        print( "           token counts, and — with --judge on — the judge's notes, which")
+        print( "           are derived from your prompt content. Bind 127.0.0.1 unless you")
+        print( "           genuinely mean to serve this.")
     if compress_method == "llmlingua2":
         from .compress import llmlingua2 as _ll
         if not _ll.available():
