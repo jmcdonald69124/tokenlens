@@ -16,6 +16,7 @@ the dependency-free test suite.
 
 from __future__ import annotations
 
+import os
 import threading
 
 _MODEL = "microsoft/llmlingua-2-xlm-roberta-large-meetingbank"
@@ -23,6 +24,25 @@ _MODEL = "microsoft/llmlingua-2-xlm-roberta-large-meetingbank"
 _lock = threading.Lock()
 _compressor = None
 _load_error: Exception | None = None
+
+
+def _device() -> str:
+    """PromptCompressor defaults to CUDA and hard-fails on machines without it.
+
+    The model is small enough to run on CPU, which is where most people running
+    a local proxy actually are, so fall back rather than lose the whole rung.
+    """
+    override = os.environ.get("TOKENLENS_LLMLINGUA_DEVICE")
+    if override:
+        return override
+    try:
+        import torch  # type: ignore
+
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"
 
 
 def available() -> bool:
@@ -43,6 +63,7 @@ def _get_compressor():
             _compressor = PromptCompressor(
                 model_name=_MODEL,
                 use_llmlingua2=True,
+                device_map=_device(),
             )
         except Exception as e:  # torch/llmlingua missing, download failure, etc.
             _load_error = e

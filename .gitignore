@@ -4,3 +4,13 @@ __pycache__/
 .venv/
 build/
 dist/
+
+# Secrets. TokenLens never stores your key; don't let git do it either.
+.env
+
+# Local editor/tool state.
+.claude/
+
+# `tokenlens eval` output. Generated per run, and stale the moment your traffic
+# or the model changes — a checked-in report is a policy nobody re-measured.
+tokenlens-eval.json

@@ -159,15 +159,22 @@ so its own chat traffic can't be intercepted today.
 
 ## 6. MVP milestones
 
-1. **Local runner skeleton** — a local proxy/CLI (BYOK) that forwards requests
+1. ✅ **Local runner skeleton** — a local proxy/CLI (BYOK) that forwards requests
    unchanged to the frontier provider and logs token counts. Runnable and
    testable by the user on their own machine. Proves plumbing + measures baseline
    savings potential.
-2. **Rungs 0–2** — the safe, always-wins compression tier.
-3. **Eval harness + one golden task set** — first ratio/accuracy curve.
-4. **Classifier + policy table** — the actual router.
+2. ✅ **Rungs 0–2** — the safe, always-wins compression tier.
+3. ✅ **Eval harness + one golden task set** — `tokenlens eval`: golden tasks run
+   cleartext and compressed, an LLM judge grades both answers blind, out comes a
+   ratio/quality curve and a per-task-class policy. The same judge runs in shadow
+   mode on live traffic (`serve --judge`) and surfaces on the dashboard. The
+   bundled 10-task set is a starter, not a benchmark.
+4. **Classifier + policy table** — the actual router. The harness now *emits* a
+   policy per task class; the proxy cannot yet read one back and apply a rate per
+   request. That gap is the next piece of work.
 5. **Rungs 3–5** — statistical, selection, and tiny-local-model pruning, each
-   gated behind eval results.
+   gated behind eval results. (Rung 5, LLMLingua-2, exists but is ungated: it
+   ships behind an explicit `--rate` you set yourself.)
 
 ---
 

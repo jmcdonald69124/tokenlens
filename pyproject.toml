@@ -16,4 +16,7 @@ dependencies = []
 tokenlens = "tokenlens.cli:main"
 
 [tool.setuptools]
-packages = ["tokenlens"]
+packages = ["tokenlens", "tokenlens.compress", "tokenlens.eval"]
+
+[tool.setuptools.package-data]
+"tokenlens.eval" = ["goldens/*.jsonl"]

@@ -7,10 +7,11 @@ import time
 from collections import deque
 
 _RECENT_MAX = 200
+_JUDGE_MAX = 25
 
 
 class Stats:
-    def __init__(self) -> None:
+    def __init__(self, judge_tolerance: float = 0.99) -> None:
         self._lock = threading.Lock()
         self.started_at = time.time()
         self.requests = 0
@@ -24,6 +25,14 @@ class Stats:
         self.measured_requests = 0
         self.real_original_tokens = 0
         self.real_compressed_tokens = 0
+        # model judgement (shadow-mode LLM-as-judge), when --judge is on
+        self.judge_tolerance = judge_tolerance
+        self.judged_requests = 0
+        self.judge_retention_sum = 0.0
+        self.judge_cleartext_sum = 0
+        self.judge_compressed_sum = 0
+        self.judge_degraded = 0
+        self._judgements: deque[dict] = deque(maxlen=_JUDGE_MAX)
         self._recent: deque[dict] = deque(maxlen=_RECENT_MAX)
         # cumulative-saved series for the dashboard sparkline
         self._series: deque[dict] = deque(maxlen=300)
@@ -82,12 +91,43 @@ class Stats:
                 "cum": self.real_original_tokens - self.real_compressed_tokens,
             })
 
+    def record_judgement(
+        self,
+        model: str,
+        cleartext_grade: int,
+        compressed_grade: int,
+        retention: float,
+        note: str,
+    ) -> None:
+        """Record one shadow-mode judgement of a compressed vs cleartext answer."""
+        ts = time.time()
+        degraded = retention < self.judge_tolerance
+        entry = {
+            "ts": ts,
+            "time": time.strftime("%H:%M:%S", time.localtime(ts)),
+            "model": model,
+            "cleartext": cleartext_grade,
+            "compressed": compressed_grade,
+            "retention": round(retention, 4),
+            "degraded": degraded,
+            "note": note,
+        }
+        with self._lock:
+            self.judged_requests += 1
+            self.judge_retention_sum += retention
+            self.judge_cleartext_sum += cleartext_grade
+            self.judge_compressed_sum += compressed_grade
+            if degraded:
+                self.judge_degraded += 1
+            self._judgements.appendleft(entry)
+
     def snapshot(self) -> dict:
         with self._lock:
             real_saved = self.real_original_tokens - self.real_compressed_tokens
             pct = None
             if self.real_original_tokens > 0:
                 pct = round(100 * real_saved / self.real_original_tokens, 1)
+            judged = self.judged_requests
             return {
                 "requests": self.requests,
                 "input_tokens": self.input_tokens,
@@ -99,16 +139,30 @@ class Stats:
                 "measured_requests": self.measured_requests,
                 "real_tokens_saved": real_saved,
                 "real_savings_pct": pct,
+                "judged_requests": judged,
+                "quality_retained_pct": (
+                    round(100 * self.judge_retention_sum / judged, 1) if judged else None
+                ),
+                "judge_degraded": self.judge_degraded,
+                "judge_tolerance": self.judge_tolerance,
+                "judge_grade_cleartext": (
+                    round(self.judge_cleartext_sum / judged, 1) if judged else None
+                ),
+                "judge_grade_compressed": (
+                    round(self.judge_compressed_sum / judged, 1) if judged else None
+                ),
             }
 
     def feed(self, limit: int = 50) -> dict:
         with self._lock:
             recent = list(self._recent)[:limit]
             series = [p["cum"] for p in self._series]
+            judgements = list(self._judgements)
         return {
             "totals": self.snapshot(),
             "recent": recent,
             "series": series,
+            "judgements": judgements,
             "uptime_s": round(time.time() - self.started_at, 1),
             "server_time": time.time(),
         }

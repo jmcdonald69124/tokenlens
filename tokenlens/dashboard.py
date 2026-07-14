@@ -39,6 +39,22 @@ DASHBOARD_HTML = r"""<!doctype html>
   .card .sub { color:var(--muted); font-size:11px; margin-top:2px; }
   .value.save { color:var(--save); }
   .value.cost { color:var(--accent); }
+  .value.good { color:var(--good); }
+  .value.bad  { color:var(--bad); }
+  .value.idle { color:var(--muted); }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px;
+           padding:12px 16px; margin-top:12px; }
+  .panel .lbl { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.6px; }
+  .panel .hint { color:var(--muted); font-size:11.5px; margin-top:6px; }
+  .jrow { display:flex; align-items:baseline; gap:10px; padding:6px 0;
+          border-bottom:1px solid var(--line); font-size:12.5px; }
+  .jrow:last-child { border-bottom:none; }
+  .jrow .t { color:var(--muted); }
+  .jrow .g { font-variant-numeric:tabular-nums; }
+  .jrow .note { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill { padding:1px 7px; border-radius:99px; font-size:10.5px; border:1px solid var(--line); }
+  .pill.ok { color:var(--good); border-color:var(--good); }
+  .pill.bad { color:var(--bad); border-color:var(--bad); }
   .banner { margin:16px 0; padding:10px 14px; border-radius:8px; border:1px solid var(--line);
             display:flex; align-items:center; gap:10px; font-size:13px; }
   .banner.good { border-color:var(--good); color:var(--good); }
@@ -84,6 +100,24 @@ DASHBOARD_HTML = r"""<!doctype html>
     </svg>
   </div>
   <div class="banner" id="cache"></div>
+  <div class="panel" id="judgewrap" style="display:none">
+    <div class="lbl">model judgement — compressed vs cleartext answers</div>
+    <div id="judgements"></div>
+    <div class="hint">A judge model grades the answer your compressed prompt produced against
+      the answer the original prompt produces, on the same request, without being told which
+      is which. 100% means it could not tell them apart.</div>
+  </div>
+  <div class="panel" id="evalwrap" style="display:none">
+    <div class="lbl" id="evallbl">calibration — tokenlens eval</div>
+    <div class="tablewrap" style="margin-top:8px">
+      <table>
+        <thead><tr><th class="l">arm</th><th>reduction</th><th>quality</th>
+          <th>worst case</th><th class="l">verdict</th></tr></thead>
+        <tbody id="evalrows"></tbody>
+      </table>
+    </div>
+    <div class="hint" id="evalpolicy"></div>
+  </div>
   <div class="tablewrap">
     <table>
       <thead><tr>
@@ -131,6 +165,50 @@ function drawSpark(series){
   fill.setAttribute("d", d.trim()+`L${W} ${H} L0 ${H} Z`);
 }
 
+// The note comes from a model. Escape it before it touches the DOM.
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function renderJudgements(d){
+  const js = d.judgements || [];
+  if (!js.length){ $("judgewrap").style.display = "none"; return; }
+  $("judgewrap").style.display = "block";
+  $("judgements").innerHTML = js.map(j => {
+    const pct = Math.round(100*j.retention);
+    const pill = j.degraded ? `<span class="pill bad">${pct}%</span>`
+                            : `<span class="pill ok">${pct}%</span>`;
+    return `<div class="jrow"><span class="t">${esc(j.time)}</span>${pill}`+
+           `<span class="g">${j.cleartext} → ${j.compressed}</span>`+
+           `<span class="note">${esc(j.note)}</span></div>`;
+  }).join("");
+}
+
+function renderEval(ev){
+  if (!ev || !ev.curve || !ev.curve.length){ $("evalwrap").style.display = "none"; return; }
+  $("evalwrap").style.display = "block";
+  $("evallbl").textContent =
+    `calibration — ${ev.tasks} golden tasks on ${ev.model}, judged by ${ev.judge_model}`;
+  $("evalrows").innerHTML = ev.curve.map(s => {
+    const cls = s.passes ? "status-2" : "status-5";
+    const verdict = s.passes ? "✓ within tolerance" : "✗ degrades quality";
+    return `<tr><td class="l">${esc(s.arm)}</td>`+
+           `<td class="saved">${s.savings_pct.toFixed(1)}%</td>`+
+           `<td>${(100*s.mean_retention).toFixed(1)}%</td>`+
+           `<td>${(100*s.worst_retention).toFixed(0)}%</td>`+
+           `<td class="l ${cls}">${verdict}</td></tr>`;
+  }).join("");
+  const p = (ev.policy||{}).default;
+  $("evalpolicy").textContent = p
+    ? (p.method === "none"
+        ? `Calibrated policy: none — ${p.reason}.`
+        : `Calibrated policy: ${p.arm} — ${p.savings_pct.toFixed(1)}% smaller at `+
+          `${(100*p.mean_retention).toFixed(1)}% of cleartext quality. Anything more `+
+          `aggressive failed the ${Math.round(100*ev.tolerance)}% bar.`)
+    : "";
+}
+
 function render(d){
   const t = d.totals;
   const cacheTotal = t.cache_read_tokens + t.cache_write_tokens;
@@ -141,13 +219,30 @@ function render(d){
   const savedSub = measured
     ? (t.real_savings_pct!=null ? t.real_savings_pct+"% smaller (measured)" : "measured")
     : "estimate — run --measure for exact";
+  const judging = (d.mode && d.mode.judge);
+  const judged = t.judged_requests || 0;
+  const tol = Math.round(100*(t.judge_tolerance||0.99));
+  let qVal = "—", qSub = "run with --judge to grade quality", qCls = "idle";
+  if (judging && !judged) {
+    qSub = "judging " + Math.round(100*d.mode.judge_sample) + "% of compressed requests…";
+  } else if (judged) {
+    const q = t.quality_retained_pct;
+    qVal = q.toFixed(1) + "%";
+    qCls = q >= tol ? "good" : "bad";
+    qSub = `${n(judged)} judged · ${t.judge_degraded} below ${tol}%`;
+  }
+
   $("cards").innerHTML =
     card("Requests", n(t.requests), "since start") +
     card("Tokens in", n(t.input_tokens), "uncached") +
     card("Tokens out", n(t.output_tokens), "") +
     card(savedLabel, n(saved), savedSub, "save") +
+    card("Quality retained", qVal, qSub, qCls) +
     card("Cost", "$"+(t.cost_usd||0).toFixed(4), "est. USD", "cost") +
     card("Cache reads", n(t.cache_read_tokens), "writes "+n(t.cache_write_tokens), "");
+
+  renderJudgements(d);
+  renderEval(d.eval);
 
   if (t.requests > 0 && d.series && d.series.length > 1) {
     $("sparkwrap").style.display = "block";
@@ -183,6 +278,12 @@ function render(d){
              `<td>${n(e.input)}</td><td>${n(e.cache_read)}</td><td>${n(e.cache_write)}</td>`+
              `<td>${n(e.output)}</td><td>${saved}</td><td>${n(e.ms)}</td><td>${cost}</td></tr>`;
     }).join("");
+  }
+  if (d.mode) {
+    const bits = ["compress=" + d.mode.compress];
+    if (d.mode.compress === "llmlingua2") bits.push("rate=" + d.mode.rate);
+    if (d.mode.judge) bits.push("judge=" + d.mode.judge_model);
+    $("mode").textContent = bits.join(" · ");
   }
   $("meta").textContent = `uptime ${d.uptime_s}s · updated ${new Date().toLocaleTimeString()}`;
 }
