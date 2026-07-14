@@ -444,12 +444,16 @@ def _load_eval_report(path: str) -> dict | None:
         "tolerance": data.get("tolerance"),
         "tasks": data.get("tasks"),
         "generated_at": data.get("generated_at"),
+        "noise_floor": data.get("noise_floor"),
+        "repeats": data.get("repeats"),
         "curve": [
             {k: s.get(k) for k in
-             ("arm", "savings_pct", "mean_retention", "worst_retention", "passes")}
+             ("arm", "savings_pct", "mean_retention", "worst_retention",
+              "passes", "resolved", "is_control")}
             for s in data.get("curve", [])
         ],
         "policy": data.get("policy", {}),
+        "task_catalog": data.get("task_catalog", []),
     }
 
 

@@ -118,6 +118,19 @@ DASHBOARD_HTML = r"""<!doctype html>
     </div>
     <div class="hint" id="evalpolicy"></div>
   </div>
+  <div class="panel" id="taskswrap" style="display:none">
+    <div class="lbl" id="taskslbl">golden set — what the calibration was measured on</div>
+    <div class="tablewrap" style="margin-top:8px">
+      <table>
+        <thead><tr><th class="l">task</th><th class="l">class</th>
+          <th class="l">what it asks</th><th>context</th></tr></thead>
+        <tbody id="taskrows"></tbody>
+      </table>
+    </div>
+    <div class="hint">These ten synthetic tasks are a smoke-grade starter set, not a
+      benchmark. Point <code>--tasks</code> at traffic shaped like yours before you
+      trust a policy — a curve from someone else's golden set is a more expensive guess.</div>
+  </div>
   <div class="tablewrap">
     <table>
       <thead><tr>
@@ -190,9 +203,14 @@ function renderEval(ev){
   $("evalwrap").style.display = "block";
   $("evallbl").textContent =
     `calibration — ${ev.tasks} golden tasks on ${ev.model}, judged by ${ev.judge_model}`;
+  const floor = ev.noise_floor || 0;
   $("evalrows").innerHTML = ev.curve.map(s => {
-    const cls = s.passes ? "status-2" : "status-5";
-    const verdict = s.passes ? "✓ within tolerance" : "✗ degrades quality";
+    let cls = "status-2", verdict = "✓ within tolerance";
+    if (s.is_control){ cls = "idle"; verdict = "— noise floor (nothing compressed)"; }
+    else if (!s.passes){ cls = "status-5"; verdict = "✗ degrades quality"; }
+    else if (s.resolved === false && floor > 0){
+      cls = "status-4"; verdict = "? provisional — loss inside the noise";
+    }
     return `<tr><td class="l">${esc(s.arm)}</td>`+
            `<td class="saved">${s.savings_pct.toFixed(1)}%</td>`+
            `<td>${(100*s.mean_retention).toFixed(1)}%</td>`+
@@ -200,13 +218,30 @@ function renderEval(ev){
            `<td class="l ${cls}">${verdict}</td></tr>`;
   }).join("");
   const p = (ev.policy||{}).default;
-  $("evalpolicy").textContent = p
+  const floorNote = floor > 0
+    ? ` Noise floor is ${(100*floor).toFixed(1)}% — the control arm lost that much `+
+      `compressing nothing, so anything under it is provisional, not measured.`
+    : "";
+  $("evalpolicy").textContent = (p
     ? (p.method === "none"
         ? `Calibrated policy: none — ${p.reason}.`
         : `Calibrated policy: ${p.arm} — ${p.savings_pct.toFixed(1)}% smaller at `+
-          `${(100*p.mean_retention).toFixed(1)}% of cleartext quality. Anything more `+
-          `aggressive failed the ${Math.round(100*ev.tolerance)}% bar.`)
-    : "";
+          `${(100*p.mean_retention).toFixed(1)}% of cleartext quality`+
+          (p.confidence === "provisional" ? " (provisional)" : "") + ".")
+    : "") + floorNote;
+  renderTasks(ev.task_catalog);
+}
+
+function renderTasks(cat){
+  if (!cat || !cat.length){ $("taskswrap").style.display = "none"; return; }
+  $("taskswrap").style.display = "block";
+  $("taskslbl").textContent = `golden set — the ${cat.length} tasks the calibration was measured on`;
+  $("taskrows").innerHTML = cat.map(t =>
+    `<tr><td class="l">${esc(t.id)}</td>`+
+    `<td class="l">${esc(t.task_class)}</td>`+
+    `<td class="l">${esc(t.question)}</td>`+
+    `<td>${n(t.context_chars)}c</td></tr>`
+  ).join("");
 }
 
 function render(d){

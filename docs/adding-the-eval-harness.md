@@ -197,11 +197,27 @@ def test_policy_is_chosen_per_class_not_globally():
     is exactly the mistake the harness exists to prevent."""
 ```
 
-The bundled set is ten tasks — long-doc QA, extraction, summarization, chat
-history, instruction-following, numeric reasoning, and one code task. It is a
-**smoke test for the harness, not a benchmark for your workload**, and the README
-now says that in as many words. If you use TokenLens on your own traffic, the
-golden set is the thing you should be writing, not the compressor.
+Here is the whole starter set — ten tasks across seven classes, each one a thing a
+real prompt does and a thing compression could plausibly break:
+
+| task | class | what it asks |
+|---|---|---|
+| `qa-outage-01` | long-doc-qa | root cause and impact duration of an incident |
+| `qa-policy-01` | long-doc-qa | a parental-leave entitlement from an HR policy |
+| `extract-actions-01` | extraction | every action item with owner and due date |
+| `extract-contract-01` | extraction | renewal date, uplifted amount, notice period |
+| `summ-memo-01` | summarization | a three-sentence executive summary |
+| `summ-feedback-01` | summarization | the top three themes in feedback, ranked |
+| `chat-refund-01` | chat-history | what the customer agreed to, from a transcript |
+| `instr-format-01` | instruction-following | an answer in exactly three fixed-shape bullets |
+| `num-budget-01` | numeric-reasoning | total spend and variance across a budget table |
+| `code-safety-01` | code-context | what a function returns on empty input — must be *refused* |
+
+These same rows now appear on the dashboard, directly under the calibration curve,
+so the number and the thing it measured sit in one view. It is a **smoke test for
+the harness, not a benchmark for your workload**, and the README says so in as many
+words. If you run TokenLens on your own traffic, the golden set is the thing you
+should be writing, not the compressor.
 
 That last code task earns its place. Its context is an indented Python function,
 which TokenLens's `is_prose()` gate should refuse to touch. The correct result is

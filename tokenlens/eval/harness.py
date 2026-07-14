@@ -157,6 +157,7 @@ class EvalReport:
     policy: dict[str, dict]
     errors: list[str] = field(default_factory=list)
     repeats: int = 1
+    task_catalog: list[dict] = field(default_factory=list)
 
     @property
     def noise_floor(self) -> float:
@@ -171,6 +172,7 @@ class EvalReport:
             "tasks": self.tasks,
             "repeats": self.repeats,
             "noise_floor": self.noise_floor,
+            "task_catalog": self.task_catalog,
             "curve": [asdict(s) for s in self.curve],
             "by_class": {k: [asdict(s) for s in v] for k, v in self.by_class.items()},
             "policy": self.policy,
@@ -310,6 +312,7 @@ def run_eval(
         policy=build_policy(by_class, curve, tolerance),
         errors=errors,
         repeats=repeats,
+        task_catalog=[t.summary for t in tasks],
     )
 
 

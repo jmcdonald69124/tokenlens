@@ -35,6 +35,18 @@ class GoldenTask:
     context: str
     reference: str
 
+    @property
+    def summary(self) -> dict:
+        """A lightweight, publishable description — what the task asks and how big
+        its context is, without dragging the full prose onto the dashboard."""
+        return {
+            "id": self.id,
+            "task_class": self.task_class,
+            "question": self.question,
+            "reference": self.reference,
+            "context_chars": len(self.context),
+        }
+
     @classmethod
     def from_dict(cls, d: dict, where: str) -> "GoldenTask":
         missing = [k for k in _REQUIRED if not d.get(k)]
