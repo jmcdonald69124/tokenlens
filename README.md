@@ -10,7 +10,7 @@ browser. Your API key is passed straight through and never stored.
 > ⚠️ **Experimental / research-stage.** The proxy, the cache-aware safety rules,
 > and the measurement all work and are tested. Output quality is now measurable
 > too — `tokenlens eval` grades compressed answers against cleartext answers with
-> an LLM judge — but **the bundled golden set is a 10-task starter set, not a
+> an LLM judge — but **the bundled calibration set is a 10-task starter set, not a
 > benchmark**. Calibrate on your own traffic before trusting a rate. The
 > Claude Code routing path is not covered by automated tests.
 > Feedback and PRs welcome.
@@ -44,7 +44,7 @@ a real coding agent without busting the cache.
   optional local LLMLingua-2 token-pruning model.
 - **Real savings measurement** — `--measure` counts original vs compressed with
   Anthropic's own `count_tokens` (free, off the hot path).
-- **Eval harness** — `tokenlens eval` runs a golden task set through the model
+- **Eval harness** — `tokenlens eval` runs a calibration set through the model
   twice, cleartext and compressed, and has a judge model grade both answers. Out
   comes a compression-ratio vs quality curve and a per-task-class policy: the
   most aggressive setting whose quality still lands within tolerance.
@@ -167,7 +167,7 @@ Tokens saved is the easy half. The half that decides whether you can actually
 turn compression up is: **did the answer get worse?** `tokenlens eval` answers
 that.
 
-For every task in a golden set it sends the same request twice — once cleartext,
+For every task in a calibration set it sends the same request twice — once cleartext,
 once through the exact `compress_request()` the proxy uses — and gives both
 answers to a judge model, which grades them against a reference answer without
 being told which is which. The metric is **retention**: the compressed answer's
@@ -190,11 +190,11 @@ default). If nothing clears the bar for a class, the policy for that class is
 Costs: about `tasks × (1 + 2 × arms)` model calls. Token counting is free
 (`count_tokens`); the completions and judge calls are not.
 
-**Bring your own golden set.** The bundled 10-task set
-(`tokenlens/eval/goldens/default.jsonl`) spans long-doc QA, extraction,
+**Bring your own calibration set.** The bundled 10-task set
+(`tokenlens/eval/calibration/default.jsonl`) spans long-doc QA, extraction,
 summarization, chat history, instruction-following, numeric reasoning, and one
 code case that must come back untouched. It is a smoke test for the harness, not
-a benchmark for your workload. A golden task is four fields:
+a benchmark for your workload. A calibration task is four fields:
 
 ```json
 {"id": "…", "task_class": "extraction", "question": "…", "context": "…", "reference": "…"}
@@ -326,7 +326,7 @@ request untouched, so the proxy never breaks a call.
 - **Feed the policy back into the proxy** — `tokenlens eval` produces a per-task-class
   policy; the proxy can't yet read it back and apply a rate per request. Today you
   read the curve and set `--rate` yourself.
-- **A golden set worth the name** — the bundled 10 tasks prove the harness runs. Real
+- **A calibration set worth the name** — the bundled 10 tasks prove the harness runs. Real
   calibration needs tasks shaped like your traffic.
 - More compression rungs (structural minify, dedup, retrieval/selection) — each one
   now has a bar to clear before it ships.
@@ -349,7 +349,7 @@ PYTHONPATH=. python3 tests/test_pipeline.py
 
 Better compressor rungs are especially welcome — and now there's a way to prove
 they work: `tokenlens eval` has to say yes before a rung is worth shipping.
-Golden tasks (`tokenlens/eval/goldens/default.jsonl`) are welcome too.
+Calibration tasks (`tokenlens/eval/calibration/default.jsonl`) are welcome too.
 
 ---
 

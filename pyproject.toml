@@ -19,4 +19,4 @@ tokenlens = "tokenlens.cli:main"
 packages = ["tokenlens", "tokenlens.compress", "tokenlens.eval"]
 
 [tool.setuptools.package-data]
-"tokenlens.eval" = ["goldens/*.jsonl"]
+"tokenlens.eval" = ["calibration/*.jsonl"]

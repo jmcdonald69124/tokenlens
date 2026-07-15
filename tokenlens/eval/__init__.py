@@ -7,7 +7,7 @@ guess.
 
 The loop (DESIGN.md §2, "calibration"):
 
-    golden task  ->  cleartext request  ->  model  ->  answer A
+    calibration task  ->  cleartext request  ->  model  ->  answer A
                  ->  compressed request ->  model  ->  answer B
                                                           |
                     answer A + answer B + reference -> judge -> retention
@@ -18,13 +18,13 @@ task class whose quality still lands within tolerance of cleartext.
 """
 
 from .harness import Arm, CaseResult, EvalReport, run_eval
-from .tasks import GoldenTask, load_tasks
+from .tasks import CalibrationTask, load_tasks
 
 __all__ = [
     "Arm",
     "CaseResult",
     "EvalReport",
-    "GoldenTask",
+    "CalibrationTask",
     "load_tasks",
     "run_eval",
 ]
