@@ -60,7 +60,7 @@ the label?* Hold that thought.
 The README said so out loud. It shipped with a warning that read, in part:
 "there is **no output-quality eval harness yet**, so don't turn `--rate` up on
 important work and assume the result is identical." The design doc was blunter.
-Milestone 3 was "eval harness + one golden task set," and buried in the locked
+Milestone 3 was "eval harness + one calibration set," and buried in the locked
 decisions was the line that should have been the first sentence of the project:
 
 > **Eval harness is built first — it defines "optimal."**
@@ -77,7 +77,7 @@ this task class, how hard can I compress before quality drops?*
 The harness is the calibration loop, and it is simple to state:
 
 ```
-golden task ──▶ cleartext request ──▶ model ──▶ answer A
+calibration task ──▶ cleartext request ──▶ model ──▶ answer A
             └─▶ compressed request ─▶ model ──▶ answer B
                                                     │
                        answer A + answer B + reference ──▶ judge ──▶ retention
@@ -178,12 +178,12 @@ The schema fills in order, so the judge is made to articulate the comparison
 before it can emit a grade. Grades come back clamped to 0–100 on our side,
 because a schema can express "integer" but not "between 0 and 100."
 
-## The golden set is the actual work
+## The calibration set is the actual work
 
-The code is a few hundred lines. The golden set is the part that decides whether
+The code is a few hundred lines. The calibration set is the part that decides whether
 any of it means anything.
 
-A golden task is four fields: a `question`, a `context` (the bulk prose the
+A calibration task is four fields: a `question`, a `context` (the bulk prose the
 compressor is allowed to chew on), a `reference` answer that a competent human
 would accept, and a `task_class`. The class matters more than it looks. Long-doc
 QA and extraction fail *completely differently* under pruning: a summary survives
@@ -216,7 +216,7 @@ real prompt does and a thing compression could plausibly break:
 These same rows now appear on the dashboard, directly under the calibration curve,
 so the number and the thing it measured sit in one view. It is a **smoke test for
 the harness, not a benchmark for your workload**, and the README says so in as many
-words. If you run TokenLens on your own traffic, the golden set is the thing you
+words. If you run TokenLens on your own traffic, the calibration set is the thing you
 should be writing, not the compressor.
 
 That last code task earns its place. Its context is an indented Python function,
@@ -265,8 +265,8 @@ this on my machine:
 ```
 
 **The safe floor does nothing to clean prose.** `safe` saves 0 tokens on every
-golden task, because it only strips whitespace and decorative junk, and my golden
-contexts are tidy. That is correct behaviour, and it is also a quiet admission:
+calibration task, because it only strips whitespace and decorative junk, and my
+calibration contexts are tidy. That is correct behaviour, and it is also a quiet admission:
 the "always-on, model-free safe floor" that ships by default is, on well-formed
 input, a no-op. It earns its keep on messy real-world prompts, not on prose
 someone wrote carefully.
@@ -550,19 +550,34 @@ because a quality number that can't tell you *what* broke isn't much of a qualit
 number. But it is an exception to a sentence I published without one, so: there
 it is.
 
+## So what is the point of all this?
+
+In one paragraph, if you skipped the rest: TokenLens sends fewer tokens to the
+model so your prompts cost less — but that is the easy half, and on its own it is
+worthless. *Anyone* can save tokens; set the rate to zero and you save all of
+them, and hand the model a prompt with the answer torn out. The hard half is
+knowing whether you broke anything, and a savings number can never tell you that,
+because the way to make it bigger is to compress harder and destroy more. So the
+point of all of this — the harness, the second number, the thousand lines that
+only exist to say *no* — is to put a **quality figure next to the savings figure**
+and make them argue, plus a way to tell real damage apart from the model just
+being noisy. TokenLens isn't really the compressor. It's the instrument that
+tells you when the compressor is lying to you — so a number that says "31%
+cheaper" is a number you can point at real traffic.
+
 ---
 
 *TokenLens is a local, BYOK, cache-aware token-measurement and compression proxy:
 about fourteen hundred lines of dependency-free Python, and now a thousand more
 that exist only to tell it when it is wrong. The harness is `tokenlens eval`; the
-judge lives in `tokenlens/eval/judge.py`; the golden set is ten tasks and wants
+judge lives in `tokenlens/eval/judge.py`; the calibration set is ten tasks and wants
 to be yours.*
 
 *Every quality number above comes from one run: ten synthetic tasks, three
 repeats, Haiku 4.5 as both the model under test and the judge, 330 calls. That is
 enough to establish that the noise floor exists and roughly how big it is. It is
-not enough to pin any single cell to a decimal place, and a curve from my golden
-set is not a curve from yours — the whole argument of this article is that
+not enough to pin any single cell to a decimal place, and a curve from my
+calibration set is not a curve from yours — the whole argument of this article is that
 unmeasured compression is a guess, and someone else's measurement is just a more
 expensive guess. Run it on tasks shaped like your traffic. Reduction percentages
 are local `chars/4` estimates; the quality percentages are the judge's.*

@@ -1,6 +1,6 @@
-"""Golden task loading.
+"""Calibration task loading.
 
-A golden task is the smallest unit that can falsify a compression setting:
+A calibration task is the smallest unit that can falsify a compression setting:
 
     question   what we ask the model to do
     context    the bulky prose the compressor is allowed to chew on
@@ -9,7 +9,7 @@ A golden task is the smallest unit that can falsify a compression setting:
                differently from extraction under pruning, so they must not be
                averaged together)
 
-The bundled set (goldens/default.jsonl) is small, synthetic and self-contained
+The bundled set (calibration/default.jsonl) is small, synthetic and self-contained
 on purpose: it ships in the package, needs no download, and every reference
 answer is checkable against the context. It is a smoke-grade calibration set,
 not a benchmark — point `--tasks` at your own traffic-shaped set before you
@@ -22,13 +22,13 @@ import json
 import os
 from dataclasses import dataclass
 
-DEFAULT_TASKS = os.path.join(os.path.dirname(__file__), "goldens", "default.jsonl")
+DEFAULT_TASKS = os.path.join(os.path.dirname(__file__), "calibration", "default.jsonl")
 
 _REQUIRED = ("id", "task_class", "question", "context", "reference")
 
 
 @dataclass(frozen=True)
-class GoldenTask:
+class CalibrationTask:
     id: str
     task_class: str
     question: str
@@ -48,7 +48,7 @@ class GoldenTask:
         }
 
     @classmethod
-    def from_dict(cls, d: dict, where: str) -> "GoldenTask":
+    def from_dict(cls, d: dict, where: str) -> "CalibrationTask":
         missing = [k for k in _REQUIRED if not d.get(k)]
         if missing:
             raise ValueError(f"{where}: task is missing {', '.join(missing)}")
@@ -61,10 +61,10 @@ class GoldenTask:
         )
 
 
-def load_tasks(path: str | None = None, classes: list[str] | None = None) -> list[GoldenTask]:
-    """Load a JSONL golden set. `classes` filters by task_class."""
+def load_tasks(path: str | None = None, classes: list[str] | None = None) -> list[CalibrationTask]:
+    """Load a JSONL calibration set. `classes` filters by task_class."""
     path = path or DEFAULT_TASKS
-    tasks: list[GoldenTask] = []
+    tasks: list[CalibrationTask] = []
     with open(path, encoding="utf-8") as fh:
         for lineno, line in enumerate(fh, 1):
             line = line.strip()
@@ -74,7 +74,7 @@ def load_tasks(path: str | None = None, classes: list[str] | None = None) -> lis
                 raw = json.loads(line)
             except json.JSONDecodeError as e:
                 raise ValueError(f"{path}:{lineno}: not valid JSON ({e})") from None
-            tasks.append(GoldenTask.from_dict(raw, f"{path}:{lineno}"))
+            tasks.append(CalibrationTask.from_dict(raw, f"{path}:{lineno}"))
 
     if not tasks:
         raise ValueError(f"{path}: no tasks found")

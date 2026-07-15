@@ -86,7 +86,7 @@ stays within tolerance.
 
 Quality measurement is the definition of "optimal," so it is built **first**.
 
-- **Golden set per task class:** (question + input + checkable answer).
+- **Calibration set per task class:** (question + input + checkable answer).
 - For each rung: run compressed vs. cleartext through the target model, score
   both, record the **compression-ratio-vs-accuracy curve**.
 - **Policy = highest rung where accuracy stays within tolerance** (e.g. ≥99% of
@@ -155,7 +155,7 @@ intercepted.
    testable by the user on their own machine. Proves plumbing + measures baseline
    savings potential.
 2. ✅ **Rungs 0–2** — the safe, always-wins compression tier.
-3. ✅ **Eval harness + one golden task set** — `tokenlens eval`: golden tasks run
+3. ✅ **Eval harness + one calibration set** — `tokenlens eval`: calibration tasks run
    cleartext and compressed, an LLM judge grades both answers blind, out comes a
    ratio/quality curve and a per-task-class policy. The same judge runs in shadow
    mode on live traffic (`serve --judge`) and surfaces on the dashboard. The

@@ -1,6 +1,6 @@
-"""The calibration runner: golden tasks in, ratio-vs-quality curve and policy out.
+"""The calibration runner: calibration tasks in, ratio-vs-quality curve and policy out.
 
-For every golden task the harness builds one request and sends it twice —
+For every calibration task the harness builds one request and sends it twice —
 once cleartext, once through the real `compress_request()` the proxy uses — and
 hands both answers to the judge. Nothing here re-implements compression; if the
 harness and the proxy ever disagree about what gets compressed, the harness is
@@ -24,7 +24,7 @@ from ..compress import compress_request, llmlingua2
 from ..compress.estimate import estimate_tokens
 from . import judge as judge_mod
 from .api import ApiError, Client, text_of
-from .tasks import GoldenTask
+from .tasks import CalibrationTask
 
 DEFAULT_MODEL = "claude-opus-4-8"
 DEFAULT_TOLERANCE = 0.99
@@ -185,7 +185,7 @@ class EvalReport:
 
 
 # --- request construction -------------------------------------------------
-def build_body(task: GoldenTask, model: str, max_tokens: int = DEFAULT_MAX_TOKENS) -> bytes:
+def build_body(task: CalibrationTask, model: str, max_tokens: int = DEFAULT_MAX_TOKENS) -> bytes:
     """A cached system prefix plus a volatile user turn — production shape."""
     payload = {
         "model": model,
@@ -229,7 +229,7 @@ def _count(client: Client, payload: dict) -> int:
 
 # --- the run --------------------------------------------------------------
 def run_eval(
-    tasks: list[GoldenTask],
+    tasks: list[CalibrationTask],
     client: Client,
     *,
     arms: list[Arm],
@@ -249,7 +249,7 @@ def run_eval(
         if progress:
             print(f"[eval] {msg}", file=sys.stderr, flush=True)
 
-    def run_task(task: GoldenTask) -> list[CaseResult]:
+    def run_task(task: CalibrationTask) -> list[CaseResult]:
         """Baseline once per repeat, then every arm against it.
 
         Each repeat gets its own cleartext answer. Pairing repeat i's compressed
@@ -317,7 +317,7 @@ def run_eval(
 
 
 def _run_arm(
-    task: GoldenTask,
+    task: CalibrationTask,
     arm: Arm,
     body: bytes,
     baseline_tokens: int,
@@ -390,7 +390,7 @@ def _run_arm(
                  compressed=result.compressed_blocks)
 
 
-def _fold(task: GoldenTask, arm: Arm, baseline_tokens: int, compressed_tokens: int,
+def _fold(task: CalibrationTask, arm: Arm, baseline_tokens: int, compressed_tokens: int,
           judgements: list, *, eligible: int, compressed: int,
           note: str = "") -> CaseResult:
     """Average the repeats of one cell into a single case."""

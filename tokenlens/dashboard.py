@@ -119,7 +119,7 @@ DASHBOARD_HTML = r"""<!doctype html>
     <div class="hint" id="evalpolicy"></div>
   </div>
   <div class="panel" id="taskswrap" style="display:none">
-    <div class="lbl" id="taskslbl">golden set — what the calibration was measured on</div>
+    <div class="lbl" id="taskslbl">calibration set — what the calibration was measured on</div>
     <div class="tablewrap" style="margin-top:8px">
       <table>
         <thead><tr><th class="l">task</th><th class="l">class</th>
@@ -129,7 +129,7 @@ DASHBOARD_HTML = r"""<!doctype html>
     </div>
     <div class="hint">These ten synthetic tasks are a smoke-grade starter set, not a
       benchmark. Point <code>--tasks</code> at traffic shaped like yours before you
-      trust a policy — a curve from someone else's golden set is a more expensive guess.</div>
+      trust a policy — a curve from someone else's calibration set is a more expensive guess.</div>
   </div>
   <div class="tablewrap">
     <table>
@@ -202,7 +202,7 @@ function renderEval(ev){
   if (!ev || !ev.curve || !ev.curve.length){ $("evalwrap").style.display = "none"; return; }
   $("evalwrap").style.display = "block";
   $("evallbl").textContent =
-    `calibration — ${ev.tasks} golden tasks on ${ev.model}, judged by ${ev.judge_model}`;
+    `calibration — ${ev.tasks} calibration tasks on ${ev.model}, judged by ${ev.judge_model}`;
   const floor = ev.noise_floor || 0;
   $("evalrows").innerHTML = ev.curve.map(s => {
     let cls = "status-2", verdict = "✓ within tolerance";
@@ -235,7 +235,7 @@ function renderEval(ev){
 function renderTasks(cat){
   if (!cat || !cat.length){ $("taskswrap").style.display = "none"; return; }
   $("taskswrap").style.display = "block";
-  $("taskslbl").textContent = `golden set — the ${cat.length} tasks the calibration was measured on`;
+  $("taskslbl").textContent = `calibration set — the ${cat.length} tasks the calibration was measured on`;
   $("taskrows").innerHTML = cat.map(t =>
     `<tr><td class="l">${esc(t.id)}</td>`+
     `<td class="l">${esc(t.task_class)}</td>`+

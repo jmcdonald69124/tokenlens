@@ -66,14 +66,14 @@ def main(argv: list[str] | None = None) -> int:
 
     e = sub.add_parser(
         "eval",
-        help="calibrate: grade compressed vs cleartext answers on a golden task set",
-        description="Runs every golden task through the model twice — cleartext and "
+        help="calibrate: grade compressed vs cleartext answers on a calibration set",
+        description="Runs every calibration task through the model twice — cleartext and "
                     "compressed — and has a judge model grade both answers. Prints a "
                     "compression-ratio vs quality curve and the most aggressive policy "
                     "that holds quality within tolerance.",
     )
     e.add_argument("--tasks", metavar="PATH",
-                   help="JSONL golden set (default: the bundled starter set)")
+                   help="JSONL calibration set (default: the bundled starter set)")
     e.add_argument("--model", default=DEFAULT_MODEL,
                    help=f"model under test (default {DEFAULT_MODEL})")
     e.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL,

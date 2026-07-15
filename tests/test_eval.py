@@ -4,7 +4,7 @@ Everything here runs without an API key and without a network: a stub client
 plays the part of the Messages API, so the plumbing (request shape, judge
 parsing, A/B de-swapping, curve maths, policy selection) is testable on its own.
 The one thing these tests deliberately cannot check is whether the judge's
-grades are any good — that is what the golden set and a real run are for.
+grades are any good — that is what the calibration set and a real run are for.
 """
 
 import json
@@ -21,11 +21,11 @@ from tokenlens.eval.harness import (
     build_policy,
     run_eval,
 )
-from tokenlens.eval.tasks import GoldenTask, load_tasks
+from tokenlens.eval.tasks import CalibrationTask, load_tasks
 
 
 def _task(tid="t1", cls="long-doc-qa"):
-    return GoldenTask(
+    return CalibrationTask(
         id=tid,
         task_class=cls,
         question="What colour is the roof?",
@@ -83,7 +83,7 @@ def test_build_body_has_a_cached_system_prefix_and_a_volatile_tail():
     assert all("cache_control" not in b for b in blocks)
 
 
-def test_bundled_golden_set_loads_and_covers_several_classes():
+def test_bundled_calibration_set_loads_and_covers_several_classes():
     tasks = load_tasks()
     assert len(tasks) >= 8
     assert len({t.task_class for t in tasks}) >= 5
@@ -169,7 +169,7 @@ def test_run_eval_grades_each_arm_against_one_shared_baseline():
 def test_an_untouched_request_is_not_sent_to_the_judge():
     """Nothing eligible means the bytes went upstream unchanged. Don't pay to
     confirm the model agrees with itself."""
-    code = GoldenTask("c1", "code-context", "What does it return?",
+    code = CalibrationTask("c1", "code-context", "What does it return?",
                       "    def f(x):\n        return x + 1\n", "x plus one")
     client = StubClient()
     report = run_eval([code], client, arms=[Arm("safe")],
